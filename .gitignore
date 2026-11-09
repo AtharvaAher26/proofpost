@@ -8,3 +8,5 @@ venv/
 proof/
 config.local.json
 .DS_Store
+
+.pytest_cache/

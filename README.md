@@ -1,7 +1,7 @@
 # ProofPost
 
 ![license](https://img.shields.io/badge/license-MIT-green)
-![status](https://img.shields.io/badge/status-MVP%20planned%20·%20building%20Dec%202026-orange)
+![status](https://img.shields.io/badge/status-v1%20implemented-green)
 ![cost](https://img.shields.io/badge/running%20cost-₹0-blue)
 
 **Your commits write your posts — with proof.**
@@ -31,9 +31,36 @@ GitHub ──► daily SCANNER ──► THEME GROUPER (commits → stories)
 
 Full detail: [docs/MVP-PLAN.md](docs/MVP-PLAN.md) · product path: [docs/PRODUCT-PLAN.md](docs/PRODUCT-PLAN.md) · original blueprint: [docs/BLUEPRINT.md](docs/BLUEPRINT.md)
 
+## Run it (v1)
+
+**Status: v1 implemented.** A Python CLI that scans your public GitHub activity, groups it into post-worthy stories, and writes a dated Post Kit markdown file. Draft-only, exactly as designed — there is no code path that posts anywhere.
+
+```bash
+pip install -r requirements.txt        # or: pip install .
+export GITHUB_USERNAME=your-github-name
+# optional: export GITHUB_TOKEN=...    # raises API rate limits; never required
+
+python -m proofpost run                # scan + write kits/kit-YYYY-MM-DD.md
+python -m proofpost themes             # preview post-worthy themes, write nothing
+python -m proofpost status             # watermark, drafted/posted counts, last kit
+python -m proofpost mark-posted <id>   # after you post, so it's never re-drafted
+```
+
+How v1 works, concretely:
+
+- **Scanner** — `GET /users/{user}/events/public` (works unauthenticated; token only raises rate limits). A watermark in the state file (`~/.proofpost/state.json`) makes scans incremental. Push events that arrive without a commit list are enriched via the repo commits API, so work sessions aren't lost.
+- **Filter** — star/fork events, unmerged PRs, branch creations, merge commits, bot/dependency commits, and trivial messages (`wip`, `fix typo`, …) are dropped.
+- **Grouper** — surviving commits are grouped into per-repo work sessions (commits < 3 hours apart); each theme is scored 0–10 (new repo / release = 9, merged PR = 8, solid session = 6–7). Themes below 6 are not drafted — a quiet period produces **no kit**, by design.
+- **Writer** — deterministic templates (no LLM in v1), built only from the scanned item's own fields: the facts lock holds by construction. Drafts follow hook → what happened → honest note → proof link → ≤4 hashtags, and are checked against the plan's banned-phrase list.
+- **Kit** — up to 3 drafts plus backup ideas, written to `kits/kit-YYYY-MM-DD.md`, with a minimum 2-day gap between kits (`--force` overrides). Drafted theme ids are recorded in state and never re-drafted.
+
+Tests (offline, fixture-driven, no network): `pip install -r requirements-dev.txt && python -m pytest`.
+
+**Deferred from the full MVP plan** (see docs/MVP-PLAN.md): the LLM planner/writer with voice samples (Groq), Telegram kit delivery, the SQLite store (v1 uses a JSON state file with the same guarantees), CI-status in proof packs, and certificate uploads. The draft-only rule is **not** deferred — it is permanent.
+
 ## Status & roadmap
 
-- **Now:** design complete (this repo). Personal v1 builds **December 2026** — Python, SQLite, Groq free tier, Telegram delivery, ₹0 running cost.
+- **Now:** personal v1 implemented (this repo) — Python CLI, GitHub REST API, template writer, JSON state, ₹0 running cost.
 - **Gate 1:** the author dogfoods it weekly through internship season. If he won't use it, it stops here.
 - **Then:** invite-only Telegram beta (5–10 builders) → web app with GitHub OAuth only if beta users stay and would pay (~₹499/mo niche: students, devs, indie hackers).
 
